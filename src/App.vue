@@ -1,30 +1,53 @@
 <script setup lang="ts">
-import HelloWorld from "./components/HelloWorld.vue";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+
+// Pages
+import LandingPage from "./pages/LandingPage.vue";
+import Homepage from "./pages/Homepage.vue";
+
+// State for landing page
+const hasEntered = ref(false);
+
+// Router instance
+const router = useRouter();
+
+// Functions
+function handleContinue() {
+  hasEntered.value = true;
+}
+
+function handleGoBack() {
+  hasEntered.value = false;
+  router.push("/"); // navigate back to landing
+}
+
+// Helper to pass props to specific pages
+function componentProps(Component: any) {
+  if (Component === Homepage) {
+    return { onGoBack: handleGoBack };
+  }
+  return {};
+}
 </script>
 
 <template>
-  <div class="flex justify-center items-center">
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div v-if="!hasEntered">
+    <!-- Landing Page -->
+    <LandingPage @continue="handleContinue" />
   </div>
-  <HelloWorld msg="Vite + Vue" />
-</template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
+  <div
+    v-else
+    class="min-h-screen bg-[url('/bgimage2.jpg')] bg-cover bg-center bg-no-repeat text-[#1e293b]"
+  >
+    <div class="min-h-screen bg-white/80">
+      <div class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Vue Router View -->
+        <router-view v-slot="{ Component }" :key="$route.fullPath">
+          <component :is="Component" v-bind="componentProps(Component)" />
+        </router-view>
+      </div>
+    </div>
+  </div>
+</template>
