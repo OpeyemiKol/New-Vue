@@ -11,10 +11,14 @@ export interface Todo {
   __temp?: boolean;
 }
 
-// Fetch all todos
+/* -------------------- FETCH ALL TODOS -------------------- */
 export const fetchTodos = async (): Promise<Todo[]> => {
-  const cached = await localforage.getItem<Todo[]>(STORAGE_KEY);
-  if (cached) return cached;
+  try {
+    const cached = await localforage.getItem<Todo[]>(STORAGE_KEY);
+    if (cached && cached.length > 0) return cached;
+  } catch (err) {
+    console.warn("Cache read failed, refetching from API...", err);
+  }
 
   const res = await fetch(todoUrl);
   if (!res.ok) throw new Error("Error fetching todos");
@@ -24,14 +28,14 @@ export const fetchTodos = async (): Promise<Todo[]> => {
   return data.todos;
 };
 
-// Fetch a single todo
+/* -------------------- FETCH SINGLE TODO -------------------- */
 export const fetchTodosById = async (id: number | string): Promise<Todo> => {
   const res = await fetch(`${todoUrl}/${id}`);
   if (!res.ok) throw new Error("Error fetching todo by ID");
   return res.json();
 };
 
-// Create a new todo
+/* -------------------- CREATE NEW TODO -------------------- */
 export const createTodo = async (newTodo: Omit<Todo, "id">): Promise<Todo> => {
   const res = await fetch(`${todoUrl}/add`, {
     method: "POST",
@@ -44,6 +48,7 @@ export const createTodo = async (newTodo: Omit<Todo, "id">): Promise<Todo> => {
   const created: Todo = await res.json();
   const existing = (await localforage.getItem<Todo[]>(STORAGE_KEY)) || [];
 
+  // Tag new todos as temporary since DummyJSON doesn’t persist them
   const finalCreated: Todo = { ...created, __temp: true };
   const updated = [finalCreated, ...existing];
   await localforage.setItem(STORAGE_KEY, updated);
@@ -51,22 +56,32 @@ export const createTodo = async (newTodo: Omit<Todo, "id">): Promise<Todo> => {
   return finalCreated;
 };
 
-// Delete a todo
+/* -------------------- DELETE TODO -------------------- */
 export const deleteTodo = async (
   id: number | string
 ): Promise<{ isDeleted: boolean }> => {
-  const res = await fetch(`${todoUrl}/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Error deleting todo");
+  try {
+    const res = await fetch(`${todoUrl}/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Error deleting todo");
 
-  const result: { isDeleted: boolean } = await res.json();
-  const existing = (await localforage.getItem<Todo[]>(STORAGE_KEY)) || [];
-  const updated = existing.filter((todo) => todo.id !== id);
-  await localforage.setItem(STORAGE_KEY, updated);
+    const result: { isDeleted: boolean } = await res.json();
 
-  return result;
+    // Always update local cache manually
+    const existing = (await localforage.getItem<Todo[]>(STORAGE_KEY)) || [];
+    const updated = existing.filter((todo) => todo.id !== id);
+    await localforage.setItem(STORAGE_KEY, updated);
+
+    return result;
+  } catch (err) {
+    console.error("API delete failed, removing locally only:", err);
+    const existing = (await localforage.getItem<Todo[]>(STORAGE_KEY)) || [];
+    const updated = existing.filter((todo) => todo.id !== id);
+    await localforage.setItem(STORAGE_KEY, updated);
+    return { isDeleted: true };
+  }
 };
 
-// Update a todo
+/* -------------------- UPDATE TODO -------------------- */
 export const updateTodo = async (
   id: number | string,
   updatedData: Partial<Todo>
@@ -74,7 +89,7 @@ export const updateTodo = async (
   const existing = (await localforage.getItem<Todo[]>(STORAGE_KEY)) || [];
   const todo = existing.find((t) => t.id === id);
 
-  // If it's temporary, just update locally
+  // Update local temporary todos
   if (todo?.__temp) {
     const updatedList = existing.map((t) =>
       t.id === id ? { ...t, ...updatedData } : t
@@ -101,7 +116,12 @@ export const updateTodo = async (
   return updated;
 };
 
-// Clear cache
+/* -------------------- CLEAR ALL LOCAL TODOS -------------------- */
 export const clearTodoCache = async (): Promise<void> => {
-  await localforage.removeItem(STORAGE_KEY);
+  try {
+    await localforage.removeItem(STORAGE_KEY);
+    console.log("🧹 Local todo cache cleared!");
+  } catch (err) {
+    console.error("Failed to clear local cache:", err);
+  }
 };

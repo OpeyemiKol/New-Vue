@@ -4,24 +4,20 @@ import type { Todo } from "../api/todos";
 import { createTodo } from "../api/todos";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 
-// Props destructured directly
 const { isOpen, onClose } = defineProps<{
   isOpen: boolean;
   onClose: () => void;
 }>();
 
-// Local state
 const todoText = ref("");
 const status = ref<"pending" | "completed">("pending");
-
 const queryClient = useQueryClient();
 
-// Optimistic mutation
 const mutation = useMutation<
-  Todo, // data returned from mutation
-  Error, // error type
-  Omit<Todo, "id">, // variables type
-  { previousTodos: Todo[] } // context type for rollback
+  Todo,
+  Error,
+  Omit<Todo, "id">,
+  { previousTodos: Todo[] }
 >({
   mutationFn: createTodo,
   onMutate: async (newTodo) => {
@@ -32,7 +28,7 @@ const mutation = useMutation<
     const optimisticTodo: Todo = {
       ...newTodo,
       id: Date.now(),
-      __temp: true, // mark as temporary
+      __temp: true,
     };
 
     queryClient.setQueryData<Todo[]>(
@@ -44,7 +40,6 @@ const mutation = useMutation<
   },
   onSuccess: (response) => {
     queryClient.setQueryData<Todo[]>(["todos"], (oldTodos = []) => {
-      // Replace temporary todos with server response
       const withoutOptimistic = oldTodos.filter((t) => !t.__temp);
       return [response, ...withoutOptimistic];
     });
@@ -108,10 +103,6 @@ const handleSubmit = (e: Event) => {
           </select>
         </div>
 
-        <p v-if="mutation.isError" class="text-red-600 text-sm">
-          Error: {{ mutation.error?.value?.message }}
-        </p>
-
         <div class="flex justify-end gap-3 pt-2">
           <button
             type="button"
@@ -122,10 +113,10 @@ const handleSubmit = (e: Event) => {
           </button>
           <button
             type="submit"
+            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition disabled:opacity-60"
             :disabled="mutation.isPending.value"
-            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded"
           >
-            {{ mutation.isPending ? "Adding..." : "Add" }}
+            Add
           </button>
         </div>
       </form>

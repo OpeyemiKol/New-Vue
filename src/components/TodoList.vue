@@ -2,7 +2,6 @@
 import type { Todo } from "../types/todo";
 import TodoItem from "./TodoItem.vue";
 
-// ✅ Only one defineProps() call
 const props = defineProps<{
   todos: Todo[];
   onDelete: (id: number | string) => void;

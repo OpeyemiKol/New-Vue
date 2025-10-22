@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
-
-// Props
-defineProps<{
-  onContinue: () => void;
-}>();
+import { useRouter } from "vue-router";
 
 onMounted(() => {
   window.scrollTo(0, 0);
 });
+
+const router = useRouter();
+
+const enterApp = () => {
+  // navigate to the main app page
+  router.push("/todos");
+};
 </script>
 
 <template>
@@ -55,7 +58,7 @@ onMounted(() => {
 
       <!-- CTA Button -->
       <button
-        @click="$props.onContinue()"
+        @click="enterApp"
         class="bg-yellow-400 cursor-pointer hover:bg-yellow-500 text-blue-900 font-semibold px-8 py-3 rounded-full text-lg shadow-xl transition-all duration-300 hover:scale-105 animate-bounceSlow"
       >
         Enter App 🚀
